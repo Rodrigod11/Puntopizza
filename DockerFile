@@ -1,0 +1,24 @@
+# ===== 1) Build stage =====
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+WORKDIR /workspace
+
+# Cache de dependencias
+COPY pom.xml .
+RUN mvn -DskipTests dependency:go-offline
+
+# Compilar
+COPY src ./src
+RUN mvn -DskipTests package
+
+# ===== 2) Run stage =====
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+
+# Copiamos el .jar generado
+COPY --from=build /workspace/target/*.jar /app/app.jar
+
+# (Render detecta el puerto real por port-scanning; EXPOSE es opcional)
+EXPOSE 8080
+
+ENV JAVA_OPTS=""
+CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
